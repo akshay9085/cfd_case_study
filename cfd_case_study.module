@@ -944,6 +944,57 @@ function cfd_case_study_mail($key, &$message, $params)
             );
             break;
 
+        case 'case_study_bulk_project_approved':
+            $message['subject'] = t('[@site_name][Case Study Project] Your uploaded project files have been approved', array('@site_name' => $site_name), array('langcode' => $langcode));
+            $message['body'] = array(
+                t('Dear @user_name,', array('@user_name' => $user_name), array('langcode' => $langcode)),
+                '',
+                t('Your uploaded abstract and project files have been approved for the following case study:', array(), array('langcode' => $langcode)),
+            );
+            $message['body'] = array_merge($message['body'], $proposal_lines, array(
+                '',
+                t('Best wishes,', array(), array('langcode' => $langcode)),
+                '',
+                t('@site_name Team', array('@site_name' => $site_name), array('langcode' => $langcode)),
+                'FOSSEE, IIT Bombay',
+            ));
+            break;
+
+        case 'case_study_bulk_project_resubmit':
+            $message['subject'] = t('[@site_name][Case Study Project] Please resubmit your project files', array('@site_name' => $site_name), array('langcode' => $langcode));
+            $message['body'] = array(
+                t('Dear @user_name,', array('@user_name' => $user_name), array('langcode' => $langcode)),
+                '',
+                t('Please resubmit the uploaded files for the following case study:', array(), array('langcode' => $langcode)),
+            );
+            $message['body'] = array_merge($message['body'], $proposal_lines, array(
+                '',
+                t('Best wishes,', array(), array('langcode' => $langcode)),
+                '',
+                t('@site_name Team', array('@site_name' => $site_name), array('langcode' => $langcode)),
+                'FOSSEE, IIT Bombay',
+            ));
+            break;
+
+        case 'case_study_bulk_project_disapproved':
+            $reason = cfd_case_study_mail_value($payload['reason'] ?? '');
+            $message['subject'] = t('[@site_name][Case Study Project] Your uploaded project files have been disapproved', array('@site_name' => $site_name), array('langcode' => $langcode));
+            $message['body'] = array(
+                t('Dear @user_name,', array('@user_name' => $user_name), array('langcode' => $langcode)),
+                '',
+                t('Your uploaded case study files have been disapproved for the following case study:', array(), array('langcode' => $langcode)),
+            );
+            $message['body'] = array_merge($message['body'], $proposal_lines, array(
+                '',
+                t('Reason for disapproval: @reason', array('@reason' => $reason), array('langcode' => $langcode)),
+                '',
+                t('Best wishes,', array(), array('langcode' => $langcode)),
+                '',
+                t('@site_name Team', array('@site_name' => $site_name), array('langcode' => $langcode)),
+                'FOSSEE, IIT Bombay',
+            ));
+            break;
+
         default:
             if (isset($payload['subject'])) {
                 $message['subject'] = (string) $payload['subject'];

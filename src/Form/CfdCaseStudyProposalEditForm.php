@@ -7,6 +7,8 @@
 
 namespace Drupal\cfd_case_study\Form;
 
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 
@@ -226,12 +228,14 @@ class CfdCaseStudyProposalEditForm extends FormBase {
       '#options' => $simulation_type_options,
       '#default_value' => $proposal_data->simulation_type_id,
       '#ajax' => [
-        'callback' => 'ajax_solver_used_callback'
+        'callback' => '::ajaxSolverUsedCallback',
+        'event' => 'change',
         ],
     ];
-    $simulation_id = !$form_state->getValue(['simulation_type']) ? $form_state->getValue([
-      'simulation_type'
-      ]) : $proposal_data->simulation_type_id;
+    $simulation_id = (int) $proposal_data->simulation_type_id;
+    if ($form_state->hasValue('simulation_type') && $form_state->getValue('simulation_type') !== '') {
+      $simulation_id = (int) $form_state->getValue('simulation_type');
+    }
 
     $form['solver_used'] = [
       '#type' => 'select',
@@ -289,14 +293,25 @@ class CfdCaseStudyProposalEditForm extends FormBase {
       '#type' => 'submit',
       '#value' => t('Submit'),
     ];
-    // @FIXME
-    // l() expects a Url object, created from a route name or external URI.
-    // $form['cancel'] = array(
-    //         '#type' => 'item',
-    //         '#markup' => l(t('Cancel'), 'case-study-project/manage-proposal'),
-    //     );
+    $form['cancel'] = [
+      '#type' => 'submit',
+      '#value' => t('Cancel'),
+      '#limit_validation_errors' => [],
+      '#submit' => ['::cancelForm'],
+    ];
 
     return $form;
+  }
+
+  /**
+   * Ajax callback for refreshing solver fields when simulation type changes.
+   */
+  public function ajaxSolverUsedCallback(array &$form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(new ReplaceCommand('#ajax-solver-replace', $form['solver_used']));
+    $response->addCommand(new ReplaceCommand('#ajax-solver-text-replace', $form['solver_used_text']));
+
+    return $response;
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {
@@ -452,6 +467,13 @@ class CfdCaseStudyProposalEditForm extends FormBase {
       'case_study_proposal_list',
       "case_study_proposal:$proposal_id",
     ]);
+    $form_state->setRedirect('cfd_case_study.proposal_all');
+  }
+
+  /**
+   * Redirects edit form cancel action to proposal list without validation.
+   */
+  public function cancelForm(array &$form, FormStateInterface $form_state) {
     $form_state->setRedirect('cfd_case_study.proposal_all');
   }
 

@@ -1,8 +1,0 @@
-name = "CFD Case Study"
-description = "CFD Case Study Project, FOSSEE, IIT Bombay"
-package = FOSSEE
-type: module
-core: 8.x
-core_version_requirement: ^8 || ^9
-
-;scripts[] = js/jquery-1.4.1.min.js
