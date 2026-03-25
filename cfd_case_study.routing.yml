@@ -155,7 +155,7 @@ cfd_case_study.generate_pdf:
   path: /case-study-project/certificates/generate-pdf
   defaults:
     _title: 'Download Certificate'
-    _form: \Drupal\cfd_case_study\Form\GeneratePdf
+    _controller: '\Drupal\cfd_case_study\Controller\DefaultController::generatePdf'
   requirements:
     _permission: 'generate pdf'
 cfd_case_study.verify_certificates_verify_certificates:
