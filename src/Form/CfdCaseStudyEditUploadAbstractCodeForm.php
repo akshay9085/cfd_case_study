@@ -7,9 +7,11 @@
 
 namespace Drupal\cfd_case_study\Form;
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Render\Element;
+use Drupal\Core\Link;
 use Drupal\Core\Url;
 
 class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
@@ -21,129 +23,106 @@ class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
     return 'cfd_case_study_edit_upload_abstract_code_form';
   }
 
-  public function buildForm(array $form, \Drupal\Core\Form\FormStateInterface $form_state) {
-    $user = \Drupal::currentUser();
-    $form['#attributes'] = ['enctype' => "multipart/form-data"];
-    /* get current proposal */
-    $route_match = \Drupal::routeMatch();
-    $proposal_id = $route_match->getParameter('id');
-    if (!$proposal_id) {
-      $proposal_id = \Drupal::request()->query->get('id');
-    }
-    $proposal_id = $proposal_id !== NULL ? (int) $proposal_id : 0;
-    $uid = $user->id();
-    $query = \Drupal::database()->select('case_study_proposal');
-    $query->fields('case_study_proposal');
-    $query->condition('id', $proposal_id);
-    $proposal_q = $query->execute();
-    if ($proposal_q) {
-      if ($proposal_data = $proposal_q->fetchObject()) {
-        /* everything ok */
-      } //$proposal_data = $proposal_q->fetchObject()
-      else {
-        \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
-        $form_state->setRedirect('cfd_case_study.proposal_edit_file_all');
-        return;
-      }
-    } //$proposal_q
-    else {
-      \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
+  /**
+   * {@inheritdoc}
+   */
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    $form['#attributes'] = ['enctype' => 'multipart/form-data'];
+
+    $proposal_id = (int) (\Drupal::routeMatch()->getParameter('id') ?: \Drupal::request()->query->get('id'));
+    $proposal_data = \Drupal::database()
+      ->select('case_study_proposal', 'csp')
+      ->fields('csp')
+      ->condition('id', $proposal_id)
+      ->execute()
+      ->fetchObject();
+
+    if (!$proposal_data) {
+      $this->messenger()->addError($this->t('Invalid proposal selected. Please try again.'));
       $form_state->setRedirect('cfd_case_study.proposal_edit_file_all');
-      return;
+      return [];
     }
-    $query = \Drupal::database()->select('case_study_submitted_abstracts');
-    $query->fields('case_study_submitted_abstracts');
-    $query->condition('proposal_id', $proposal_data->id);
-    $abstracts_q = $query->execute()->fetchObject();
+
+    $existing_uploaded_a_file = $this->defaultValueForUploadedFiles('A', (int) $proposal_data->id) ?: new \stdClass();
+    $existing_uploaded_a_file->filename = $existing_uploaded_a_file->filename ?? 'No file uploaded';
+
+    $existing_uploaded_s_file = $this->defaultValueForUploadedFiles('S', (int) $proposal_data->id) ?: new \stdClass();
+    $existing_uploaded_s_file->filename = $existing_uploaded_s_file->filename ?? 'No file uploaded';
+
     $form['project_title'] = [
       '#type' => 'item',
       '#markup' => $proposal_data->project_title,
-      '#title' => t('Title of the Case Study Project'),
+      '#title' => $this->t('Title of the Case Study Project'),
     ];
     $form['contributor_name'] = [
       '#type' => 'item',
       '#markup' => $proposal_data->contributor_name,
-      '#title' => t('Contributor Name'),
+      '#title' => $this->t('Contributor Name'),
     ];
-    $existing_uploaded_A_file = $this->default_value_for_uploaded_files("A", $proposal_data->id);
-    if (!$existing_uploaded_A_file) {
-      $existing_uploaded_A_file = new stdClass();
-      $existing_uploaded_A_file->filename = "No file uploaded";
-    } //!$existing_uploaded_A_file
-    // @FIXME
-    // // @FIXME
-    // // This looks like another module's variable. You'll need to rewrite this call
-    // // to ensure that it uses the correct configuration object.
-    // $form['upload_case_study_abstract'] = array(
-    //         '#type' => 'file',
-    //         '#title' => t('Upload the Case study abstract'),
-    //         //'#required' => TRUE,
-    //         '#description' => t('<span style="color:red;">Current File :</span> ' . $existing_uploaded_A_file->filename . '<br />Separate filenames with underscore. No spaces or any special characters allowed in filename.') . '<br />' . t('<span style="color:red;">Allowed file extensions : ') . variable_get('resource_upload_extensions', '') . '</span>',
-    //     );
-
-    $existing_uploaded_S_file = $this->default_value_for_uploaded_files("S", $proposal_data->id);
-    if (!$existing_uploaded_S_file) {
-      $existing_uploaded_S_file = new stdClass();
-      $existing_uploaded_S_file->filename = "No file uploaded";
-    } //!$existing_uploaded_S_file
-    // @FIXME
-    // // @FIXME
-    // // This looks like another module's variable. You'll need to rewrite this call
-    // // to ensure that it uses the correct configuration object.
-    // $form['upload_case_study_developed_process'] = array(
-    //         '#type' => 'file',
-    //         '#title' => t('Upload the Case Directory'),
-    //         //'#required' => TRUE,
-    //         '#description' => t('<span style="color:red;">Current File :</span> ' . $existing_uploaded_S_file->filename . '<br />Separate filenames with underscore. No spaces or any special characters allowed in filename.') . '<br />' . t('<span style="color:red;">Allowed file extensions : ') . variable_get('case_study_project_files_extensions', '') . '</span>',
-    //     );
-
+    $form['upload_case_study_abstract'] = [
+      '#type' => 'file',
+      '#title' => $this->t('Upload the Case Study abstract'),
+      '#description' => $this->t('<span style="color:red;">Current File:</span> @file<br />Separate filenames with underscore. No spaces or any special characters allowed in filename.', [
+        '@file' => $existing_uploaded_a_file->filename,
+      ]) . '<br />' . $this->t('<span style="color:red;">Allowed file extensions: @ext</span>', [
+        '@ext' => $this->getAllowedExtensions('A') ?: $this->t('Not configured'),
+      ]),
+    ];
+    $form['upload_case_study_developed_process'] = [
+      '#type' => 'file',
+      '#title' => $this->t('Upload the Case Directory'),
+      '#description' => $this->t('<span style="color:red;">Current File:</span> @file<br />Separate filenames with underscore. No spaces or any special characters allowed in filename.', [
+        '@file' => $existing_uploaded_s_file->filename,
+      ]) . '<br />' . $this->t('<span style="color:red;">Allowed file extensions: @ext</span>', [
+        '@ext' => $this->getAllowedExtensions('S') ?: $this->t('Not configured'),
+      ]),
+    ];
     $form['prop_id'] = [
       '#type' => 'hidden',
       '#value' => $proposal_data->id,
     ];
     $form['submit'] = [
       '#type' => 'submit',
-      '#value' => t('Submit'),
+      '#value' => $this->t('Submit'),
     ];
-    // @FIXME
-    // l() expects a Url object, created from a route name or external URI.
-    // $form['cancel'] = array(
-    //         '#type' => 'item',
-    //         '#markup' => l(t('Cancel'), 'case-study-project/manage-proposal/edit-upload-file'),
-    //     );
+    $form['cancel'] = [
+      '#type' => 'item',
+      '#markup' => Link::fromTextAndUrl(
+        $this->t('Cancel'),
+        Url::fromRoute('cfd_case_study.proposal_edit_file_all')
+      )->toString(),
+    ];
 
     return $form;
   }
 
-  public function validateForm(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
-
-    $submitted_abstract_id = \Drupal::database()->select('case_study_submitted_abstracts')
-      ->fields('case_study_submitted_abstracts', ['id'])
-      ->condition('proposal_id', $proposal_id)
-      ->execute()
-      ->fetchField() ?: 0;
-
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state) {
     $files = \Drupal::request()->files->get('files') ?? [];
     $abstract = $files['upload_case_study_abstract'] ?? NULL;
     $process = $files['upload_case_study_developed_process'] ?? NULL;
+
     if ((!$abstract || !$abstract->isValid()) && (!$process || !$process->isValid())) {
-      $this->messenger()->addError($this->t('No files uploaded'));
+      $form_state->setErrorByName('upload_case_study_abstract', $this->t('No files uploaded.'));
       return;
     }
-    foreach (['upload_case_study_abstract' => 'A', 'upload_case_study_developed_process' => 'S'] as $name => $file_type) {
+
+    foreach ([
+      'upload_case_study_abstract' => 'A',
+      'upload_case_study_developed_process' => 'S',
+    ] as $name => $file_type) {
       $upload = $files[$name] ?? NULL;
       if (!$upload || !$upload->isValid()) {
         continue;
       }
-      if ($file_type === 'A') {
-        $allowed_extensions_str = \Drupal::config('cfd_case_study.settings')->get('resource_upload_extensions');
-      }
-      else {
-        $allowed_extensions_str = \Drupal::config('cfd_case_study.settings')->get('case_study_project_files_extensions');
-      }
-      $allowed_extensions = array_filter(array_map('trim', explode(',', (string) $allowed_extensions_str)));
+
+      $allowed_extensions_str = $this->getAllowedExtensions($file_type);
+      $allowed_extensions = array_filter(array_map('strtolower', array_map('trim', explode(',', (string) $allowed_extensions_str))));
       $original_name = (string) $upload->getClientOriginalName();
       $temp_extension = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+
       if (!empty($allowed_extensions) && !in_array($temp_extension, $allowed_extensions, TRUE)) {
         $form_state->setErrorByName($name, $this->t('Only file with @ext extensions can be uploaded.', ['@ext' => $allowed_extensions_str]));
       }
@@ -154,76 +133,123 @@ class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
         $form_state->setErrorByName($name, $this->t('Invalid file name specified. Only alphabets and numbers are allowed as a valid filename.'));
       }
     }
-
   }
 
-  public function submitForm(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
     $user = \Drupal::currentUser();
-    $v = $form_state->getValues();
+    $proposal_id = (int) $form_state->getValue('prop_id');
     $root_path = cfd_case_study_path();
-    $query = \Drupal::database()->select('case_study_proposal');
-    $query->fields('case_study_proposal');
-    $query->condition('id', $v['prop_id']);
-    $proposal_q = $query->execute();
-    $proposal_data = $proposal_q->fetchObject();
-    $proposal_id = $proposal_data->id;
+    $proposal_data = \Drupal::database()
+      ->select('case_study_proposal', 'csp')
+      ->fields('csp')
+      ->condition('id', $proposal_id)
+      ->execute()
+      ->fetchObject();
+
     if (!$proposal_data) {
       $form_state->setRedirectUrl(Url::fromRoute('<front>'));
       return;
-    } //!$proposal_data
-    $proposal_id = $proposal_data->id;
-    $proposal_directory = $proposal_data->directory_name;
-    /* create proposal folder if not present */
-    //$dest_path = $proposal_directory . '/';
-    $dest_path_project_files = $proposal_directory . '/';
-    $proposal_id = $proposal_data->id;
+    }
+
+    $submitted_abstract = \Drupal::database()
+      ->select('case_study_submitted_abstracts', 'cssa')
+      ->fields('cssa', ['id'])
+      ->condition('proposal_id', $proposal_id)
+      ->execute()
+      ->fetchObject();
+
+    if ($submitted_abstract) {
+      $submitted_abstract_id = (int) $submitted_abstract->id;
+    }
+    else {
+      $submitted_abstract_id = \Drupal::database()
+        ->insert('case_study_submitted_abstracts')
+        ->fields([
+          'proposal_id' => $proposal_id,
+          'approver_uid' => 0,
+          'abstract_approval_status' => 0,
+          'abstract_upload_date' => time(),
+          'abstract_approval_date' => 0,
+          'is_submitted' => 1,
+        ])
+        ->execute();
+
+      \Drupal::database()
+        ->update('case_study_proposal')
+        ->fields(['is_submitted' => 1])
+        ->condition('id', $proposal_id)
+        ->execute();
+    }
+
     $files = \Drupal::request()->files->get('files') ?? [];
     $file_system = \Drupal::service('file_system');
-    $target_dir = $root_path . $dest_path_project_files;
-    $file_system->prepareDirectory($target_dir, \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY | \Drupal\Core\File\FileSystemInterface::MODIFY_PERMISSIONS);
+    $target_dir = rtrim($root_path . $proposal_data->directory_name, '/\\') . DIRECTORY_SEPARATOR;
+    $prepared = $file_system->prepareDirectory($target_dir, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+
+    if (!$prepared) {
+      $this->messenger()->addError($this->t('Unable to prepare the upload directory.'));
+      return;
+    }
+
+    $abs_file_name = 'Not updated';
+    $proj_file_name = 'Not updated';
+
     foreach ($files as $file_form_name => $upload) {
       if (!$upload || !$upload->isValid()) {
         continue;
       }
+
       $file_type = NULL;
-      if (strstr($file_form_name, 'upload_case_study_abstract')) {
+      if (str_contains($file_form_name, 'upload_case_study_abstract')) {
         $file_type = 'A';
         $abs_file_name = $upload->getClientOriginalName();
       }
-      else {
-        $abs_file_name = "Not updated";
-      }
-      if (strstr($file_form_name, 'upload_case_study_developed_process')) {
+      elseif (str_contains($file_form_name, 'upload_case_study_developed_process')) {
         $file_type = 'S';
         $proj_file_name = $upload->getClientOriginalName();
       }
-      else {
-        $proj_file_name = "Not updated";
-      }
-      if (empty($file_type)) {
+
+      if (!$file_type) {
         continue;
       }
+
       $original_name = $file_system->basename($upload->getClientOriginalName());
       $target_path = $target_dir . $original_name;
-      if (!$upload->move($target_dir, $original_name)) {
-        $this->messenger()->addError($this->t('@filename file not updated successfully.', ['@filename' => $original_name]));
-        continue;
-      }
-      $filemime = \Drupal::service('file.mime_type.guesser')->guessMimeType($target_path) ?: $upload->getClientMimeType();
-      $filesize = filesize($target_path);
+      $existing_file = \Drupal::database()
+        ->select('case_study_submitted_abstracts_file', 'cssaf')
+        ->fields('cssaf')
+        ->condition('proposal_id', $proposal_id)
+        ->condition('filetype', $file_type)
+        ->execute()
+        ->fetchObject();
 
-      $query_ab_f = "SELECT * FROM case_study_submitted_abstracts_file WHERE proposal_id = :proposal_id AND filetype = :filetype";
-      $args_ab_f = [
-        ":proposal_id" => $proposal_id,
-        ":filetype" => $file_type,
-      ];
-      $query_ab_f_result = \Drupal::database()->query($query_ab_f, $args_ab_f)->fetchObject();
-      if ($query_ab_f_result && !empty($query_ab_f_result->filename)) {
-        $old_path = $target_dir . $query_ab_f_result->filename;
+      if ($existing_file && !empty($existing_file->filename)) {
+        $old_path = $target_dir . $existing_file->filename;
         if (is_file($old_path)) {
           unlink($old_path);
         }
-        \Drupal::database()->update('case_study_submitted_abstracts_file')
+      }
+      elseif (is_file($target_path)) {
+        unlink($target_path);
+      }
+
+      try {
+        $upload->move($target_dir, $original_name);
+      }
+      catch (\Exception $exception) {
+        $this->messenger()->addError($this->t('@filename file was not updated successfully.', ['@filename' => $original_name]));
+        continue;
+      }
+
+      $filemime = \Drupal::service('file.mime_type.guesser')->guessMimeType($target_path) ?: $upload->getClientMimeType();
+      $filesize = file_exists($target_path) ? filesize($target_path) : 0;
+
+      if ($existing_file) {
+        \Drupal::database()
+          ->update('case_study_submitted_abstracts_file')
           ->fields([
             'filename' => $original_name,
             'filepath' => $original_name,
@@ -236,7 +262,8 @@ class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
           ->execute();
       }
       else {
-        \Drupal::database()->insert('case_study_submitted_abstracts_file')
+        \Drupal::database()
+          ->insert('case_study_submitted_abstracts_file')
           ->fields([
             'submitted_abstract_id' => $submitted_abstract_id,
             'proposal_id' => $proposal_id,
@@ -251,36 +278,19 @@ class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
           ])
           ->execute();
       }
+
       $this->messenger()->addStatus($this->t('@filename file updated successfully.', ['@filename' => $original_name]));
     }
-    /* sending email */
-    $email_to = $user->getEmail();
-    // @FIXME
-    // // @FIXME
-    // // This looks like another module's variable. You'll need to rewrite this call
-    // // to ensure that it uses the correct configuration object.
-    // $from = variable_get('case_study_from_email', '');
-
-    // @FIXME
-    // // @FIXME
-    // // This looks like another module's variable. You'll need to rewrite this call
-    // // to ensure that it uses the correct configuration object.
-    // $bcc = variable_get('case_study_emails', '');
-
-    // @FIXME
-    // // @FIXME
-    // // This looks like another module's variable. You'll need to rewrite this call
-    // // to ensure that it uses the correct configuration object.
-    // $cc = variable_get('case_study_cc_emails', '');
 
     $config = \Drupal::config('cfd_case_study.settings');
-    $from = $config->get('case_study_from_email') ?: \Drupal::config('system.site')->get('mail');
+    $from = $config->get('case_study_from_email') ?: $config->get('from_email') ?: \Drupal::config('system.site')->get('mail');
     if (empty($from)) {
       $from = 'no-reply@localhost';
     }
-    $bcc = $config->get('case_study_emails');
-    $cc = $config->get('case_study_cc_emails');
+    $bcc = $config->get('case_study_emails') ?: $config->get('emails');
+    $cc = $config->get('case_study_cc_emails') ?: $config->get('cc_emails');
 
+    $email_to = $user->getEmail();
     $params['abstract_edit_file_uploaded']['proposal_id'] = $proposal_id;
     $params['abstract_edit_file_uploaded']['user_id'] = $user->id();
     $params['abstract_edit_file_uploaded']['abs_file'] = $abs_file_name;
@@ -306,23 +316,44 @@ class CfdCaseStudyEditUploadAbstractCodeForm extends FormBase {
         $this->messenger()->addError($this->t('Error sending email message.'));
       }
     }
-    \Drupal\Core\Cache\Cache::invalidateTags([
+
+    Cache::invalidateTags([
       'case_study_proposal_list',
       "case_study_proposal:$proposal_id",
     ]);
-    $form_state->setRedirect('cfd_case_study.edit_upload_abstract_code_form');
+
+    $form_state->setRedirect('cfd_case_study.edit_upload_abstract_code_form', [], [
+      'query' => ['id' => $proposal_id],
+    ]);
   }
 
-  protected function default_value_for_uploaded_files($filetype, $proposal_id) {
-    $query = \Drupal::database()->select('case_study_submitted_abstracts_file');
-    $query->fields('case_study_submitted_abstracts_file');
+  /**
+   * Returns the configured extension list for a file type.
+   */
+  protected function getAllowedExtensions(string $file_type): string {
+    $config = \Drupal::config('cfd_case_study.settings');
+
+    if ($file_type === 'A') {
+      return (string) $config->get('resource_upload_extensions');
+    }
+
+    return (string) ($config->get('case_study_project_files_extensions') ?: $config->get('case_study_upload_extensions') ?: '');
+  }
+
+  /**
+   * Returns the existing uploaded file row for a proposal/file type.
+   */
+  protected function defaultValueForUploadedFiles(string $filetype, int $proposal_id) {
+    $query = \Drupal::database()->select('case_study_submitted_abstracts_file', 'cssaf');
+    $query->fields('cssaf');
     $query->condition('proposal_id', $proposal_id);
+
     if ($filetype === 'S' || $filetype === 'A') {
       $query->condition('filetype', $filetype);
       return $query->execute()->fetchObject();
     }
+
     return NULL;
   }
 
 }
-?>
