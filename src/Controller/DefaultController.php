@@ -248,8 +248,9 @@ public function cfd_case_study_proposal_all() {
       'approval_status',
     ]);
     $query->condition('csp.approval_status', [0, 1, 2], 'NOT IN');
-    $query->orderBy('csp.approval_status', 'DESC');
+  
     $query->orderBy('csp.id', 'DESC');
+      $query->orderBy('csp.approval_status', 'DESC');
     $proposal_q = $query->execute();
     foreach ($proposal_q as $proposal_data) {
       $approval_status = '';
