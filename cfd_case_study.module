@@ -481,7 +481,7 @@ function cfd_case_study_get_proposal()
     $proposal_data = $proposal_q->fetchObject();
     if (!$proposal_data) {
         \Drupal::messenger()->addError("You do not have any approved  Case Study proposal. Please propose a Case Study");
-        // drupal_goto('');
+        return false;
     } //!$proposal_data
     switch ($proposal_data->approval_status) {
         case 0:

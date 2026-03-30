@@ -334,8 +334,12 @@ public function cfd_case_study_abstract() {
 
     $proposal_data = cfd_case_study_get_proposal();
     if (!$proposal_data) {
-        // Redirect to a default page or handle appropriately.
-        return;
+        return [
+          '#markup' => '',
+          '#cache' => [
+            'contexts' => ['user', 'url.path', 'url.query_args'],
+          ],
+        ];
     }
 
     /* Get experiment list */
