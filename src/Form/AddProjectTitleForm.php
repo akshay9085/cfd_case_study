@@ -56,7 +56,7 @@ class AddProjectTitleForm extends FormBase {
     $form['new_project_title_name'] = [
       '#type' => 'textfield',
       '#title' => t('Enter the name of the project title'),
-      '#size' => 250,
+      // '#size' => 250,
       '#attributes' => [
         'placeholder' => t('Enter the name of the project title displayed to the contributor')
         ],
@@ -80,7 +80,7 @@ class AddProjectTitleForm extends FormBase {
     // 	);
     $form['upload_project_title_resource_file']['project_title_resource_file_path'] = [
       '#type' => 'file',
-      '#size' => 48,
+      // '#size' => 48,
       '#description' => $this->t('<span style="color:red;">Upload filenames with allowed extensions only. No spaces or any special characters allowed in filename.</span>') . '<br />' . $this->t('<span style="color:red;">Allowed file extensions: ') . \Drupal::config('cfd_case_study.settings')->get('list_of_available_projects_file') . '</span>',
     ];
 

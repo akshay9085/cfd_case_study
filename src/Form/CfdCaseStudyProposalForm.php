@@ -87,7 +87,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['contributor_name'] = [
       '#type' => 'textfield',
       '#title' => t('Name of the contributor'),
-      '#size' => 250,
+      // '#size' => 250,
       '#attributes' => [
         'placeholder' => t('Enter your full name.....')
         ],
@@ -97,14 +97,14 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['contributor_email_id'] = [
       '#type' => 'textfield',
       '#title' => t('Email'),
-      '#size' => 30,
+      // '#size' => 30,
       '#value' => $user ? $user->getEmail() : '',
       '#disabled' => TRUE,
     ];
     $form['contributor_contact_no'] = [
       '#type' => 'textfield',
       '#title' => t('Contact No.'),
-      '#size' => 10,
+      // '#size' => 10,
       '#attributes' => [
         'placeholder' => t('Enter your contact number')
         ],
@@ -113,7 +113,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['university'] = [
       '#type' => 'textfield',
       '#title' => t('University'),
-      '#size' => 80,
+      // '#size' => 80,
       '#maxlength' => 200,
       '#required' => TRUE,
       '#attributes' => [
@@ -123,7 +123,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['institute'] = [
       '#type' => 'textfield',
       '#title' => t('Institute'),
-      '#size' => 80,
+      // '#size' => 80,
       '#maxlength' => 200,
       '#required' => TRUE,
       '#attributes' => [
@@ -157,7 +157,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['faculty_name'] = [
       '#type' => 'textfield',
       '#title' => t('Name of the Faculty Member of your Institution, if any, who helped you with this Case Study Project'),
-      '#size' => 50,
+      // '#size' => 50,
       '#maxlength' => 50,
       '#validated' => TRUE,
       '#description' => t('<span style="color:red">Maximum character limit is 50</span>'),
@@ -165,7 +165,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['faculty_department'] = [
       '#type' => 'textfield',
       '#title' => t('Department of the Faculty Member of your Institution, if any, who helped you with this Case Study Project'),
-      '#size' => 50,
+      // '#size' => 50,
       '#maxlength' => 50,
       '#validated' => TRUE,
       '#description' => t('<span style="color:red">Maximum character limit is 50</span>'),
@@ -173,7 +173,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['faculty_email'] = [
       '#type' => 'textfield',
       '#title' => t('Email id of the Faculty Member of your Institution, if any, who helped you with this Case Study Project'),
-      '#size' => 255,
+      // '#size' => 255,
       '#maxlength' => 255,
       '#validated' => TRUE,
       '#description' => t('<span style="color:red">Maximum character limit is 255</span>'),
@@ -192,7 +192,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['other_country'] = [
       '#type' => 'textfield',
       '#title' => t('Other than India'),
-      '#size' => 100,
+      // '#size' => 100,
       '#attributes' => [
         'placeholder' => t('Enter your country name')
         ],
@@ -207,7 +207,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['other_state'] = [
       '#type' => 'textfield',
       '#title' => t('State other than India'),
-      '#size' => 100,
+      // '#size' => 100,
       '#attributes' => [
         'placeholder' => t('Enter your state/region name')
         ],
@@ -222,7 +222,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['other_city'] = [
       '#type' => 'textfield',
       '#title' => t('City other than India'),
-      '#size' => 100,
+      // '#size' => 100,
       '#attributes' => [
         'placeholder' => t('Enter your city name')
         ],
@@ -262,7 +262,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     $form['pincode'] = [
       '#type' => 'textfield',
       '#title' => t('Pincode'),
-      '#size' => 6,
+      // '#size' => 6,
     ];
     /***************************************************************************/
     $form['hr'] = [
@@ -299,7 +299,7 @@ class CfdCaseStudyProposalForm extends FormBase {
       $form['project_title'] = [
         '#type' => 'textfield',
         '#title' => t('Project Title'),
-        '#size' => 250,
+        // '#size' => 250,
         '#description' => t('Maximum character limit is 250'),
         '#required' => TRUE,
         '#validated' => TRUE,
@@ -316,7 +316,7 @@ class CfdCaseStudyProposalForm extends FormBase {
       $form['project_title'] = [
         '#type' => 'textfield',
         '#title' => t('Project Title'),
-        '#size' => 250,
+        // '#size' => 250,
         '#description' => t('Maximum character limit is 250'),
         '#required' => TRUE,
         '#validated' => TRUE,
@@ -367,7 +367,7 @@ class CfdCaseStudyProposalForm extends FormBase {
       $form['solver_wrapper']['solver_used_text'] = [
         '#type' => 'textfield',
         '#title' => t('Enter the Solver to be used'),
-        '#size' => 100,
+        // '#size' => 100,
         '#description' => t('Maximum character limit is 50'),
         '#required' => TRUE,
         '#parents' => ['solver_used_text'],
@@ -383,7 +383,7 @@ class CfdCaseStudyProposalForm extends FormBase {
     
     $form['abstract_file']['abstract_file_path'] = [
       '#type' => 'file',
-      '#size' => 48,
+      // '#size' => 48,
       '#description' => t('<span style="color:red;">Upload filenames with allowed extensions only. No spaces or any special characters allowed in filename.</span>') . '<br />' . t('<span style="color:red;">Allowed file extensions: ') . \Drupal::config('cfd_case_study.settings')->get('resource_upload_extensions') . '</span>',
   ];
   // var_dump(\Drupal::config('cfd_case_study.settings')->get('default_allowed_extensions'));die;
